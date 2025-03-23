@@ -1,27 +1,27 @@
 # Unit tests for Morton encoding and decoding
 
 using Test
-using Dmk.Octree.MortonKey
+using Dmk.Octree.Morton
 using Dmk.Octree.Constants
 using TestItemRunner
 
 @testitem "Root key" begin
 
-    key = Dmk.Octree.MortonKey.root()
-    @test Dmk.Octree.MortonKey.is_valid(key)
-    @test Dmk.Octree.MortonKey.level(key) == 0
-    @test Dmk.Octree.MortonKey.decode(key) == (0, (0, 0, 0))
+    key = Dmk.Octree.Morton.root()
+    @test Dmk.Octree.Morton.is_valid(key)
+    @test Dmk.Octree.Morton.level(key) == 0
+    @test Dmk.Octree.Morton.decode(key) == (0, (0, 0, 0))
 end
 
 @testitem "Encoding and decoding" begin
 
-    key = Dmk.Octree.MortonKey.from_index_and_level(Dmk.Octree.Constants.LEVEL_SIZE - 1,
+    key = Dmk.Octree.Morton.from_index_and_level(Dmk.Octree.Constants.LEVEL_SIZE - 1,
         Dmk.Octree.Constants.LEVEL_SIZE - 1,
         Dmk.Octree.Constants.LEVEL_SIZE - 1,
         Dmk.Octree.Constants.DEEPEST_LEVEL)
-    @test Dmk.Octree.MortonKey.is_valid(key)
-    @test Dmk.Octree.MortonKey.level(key) == Dmk.Octree.Constants.DEEPEST_LEVEL
-    @test Dmk.Octree.MortonKey.decode(key) == (Dmk.Octree.Constants.DEEPEST_LEVEL,
+    @test Dmk.Octree.Morton.is_valid(key)
+    @test Dmk.Octree.Morton.level(key) == Dmk.Octree.Constants.DEEPEST_LEVEL
+    @test Dmk.Octree.Morton.decode(key) == (Dmk.Octree.Constants.DEEPEST_LEVEL,
         (Dmk.Octree.Constants.LEVEL_SIZE - 1,
             Dmk.Octree.Constants.LEVEL_SIZE - 1,
             Dmk.Octree.Constants.LEVEL_SIZE - 1))
@@ -108,12 +108,12 @@ end
 @testitem "parent" begin
 
     index::Tuple{UInt64,UInt64,UInt64} = (15, 39, 45)
-    key = Dmk.Octree.MortonKey.from_index_and_level(index..., UInt64(9))
-    parent = Dmk.Octree.MortonKey.parent(key)
+    key = Dmk.Octree.Morton.from_index_and_level(index..., UInt64(9))
+    parent = Dmk.Octree.Morton.parent(key)
 
     expected_index = (7, 19, 22)
 
-    (actual_level, actual_index) = Dmk.Octree.MortonKey.decode(parent)
+    (actual_level, actual_index) = Dmk.Octree.Morton.decode(parent)
 
     @test actual_level == 8
     @test actual_index == expected_index
@@ -121,38 +121,38 @@ end
 end
 
 @testitem "ancestor" begin
-    import Dmk.Octree.MortonKey: parent
+    import Dmk.Octree.Morton: parent
 
     index::Tuple{UInt64,UInt64,UInt64} = (15, 39, 45)
-    key = Dmk.Octree.MortonKey.from_index_and_level(index..., UInt64(9))
-    @test Dmk.Octree.MortonKey.is_ancestor(key, key)
+    key = Dmk.Octree.Morton.from_index_and_level(index..., UInt64(9))
+    @test Dmk.Octree.Morton.is_ancestor(key, key)
 
     ancestor = parent(parent(key))
-    @test Dmk.Octree.MortonKey.is_ancestor(ancestor, key)
+    @test Dmk.Octree.Morton.is_ancestor(ancestor, key)
 end
 
 @testitem "finest common ancestor" begin
 
-    import Dmk.Octree.MortonKey: parent
+    import Dmk.Octree.Morton: parent
     import Dmk.Octree.Constants
 
     index::Tuple{UInt64,UInt64,UInt64} = (15, 39, 45)
-    key = Dmk.Octree.MortonKey.from_index_and_level(index..., UInt64(9))
+    key = Dmk.Octree.Morton.from_index_and_level(index..., UInt64(9))
     ancestor = parent(parent(key))
 
-    @test Dmk.Octree.MortonKey.finest_common_ancestor(key, ancestor) == ancestor
+    @test Dmk.Octree.Morton.finest_common_ancestor(key, ancestor) == ancestor
 
     # The finest ancestor of the following keys should be the root of the tree.
 
-    key1 = Dmk.Octree.MortonKey.from_index_and_level(UInt64(0), UInt64(0), UInt64(0), Constants.DEEPEST_LEVEL - 1)
-    key2 = Dmk.Octree.MortonKey.from_index_and_level(Constants.LEVEL_SIZE - 1, Constants.LEVEL_SIZE - 1, Constants.LEVEL_SIZE - 1, Constants.DEEPEST_LEVEL)
+    key1 = Dmk.Octree.Morton.from_index_and_level(UInt64(0), UInt64(0), UInt64(0), Constants.DEEPEST_LEVEL - 1)
+    key2 = Dmk.Octree.Morton.from_index_and_level(Constants.LEVEL_SIZE - 1, Constants.LEVEL_SIZE - 1, Constants.LEVEL_SIZE - 1, Constants.DEEPEST_LEVEL)
 
-    @test Dmk.Octree.MortonKey.finest_common_ancestor(key1, key2) == Dmk.Octree.MortonKey.root()
+    @test Dmk.Octree.Morton.finest_common_ancestor(key1, key2) == Dmk.Octree.Morton.root()
 end
 
 # let index = [15, 39, 45];
 
-#     let key = MortonKey::from_index_and_level(index, 9);
+#     let key = Morton::from_index_and_level(index, 9);
 #     // The finest ancestor with itself is the key itself.
 #     assert_eq!(key.finest_common_ancestor(key), key);
 #     // Finest ancestor with ancestor two levels up is the ancestor.
@@ -161,8 +161,8 @@ end
 
 #     // Finest ancestor  of the following keys should be the root of the tree.
 
-#     let key1 = MortonKey::from_index_and_level([0, 0, 0], DEEPEST_LEVEL as usize - 1);
-#     let key2 = MortonKey::from_index_and_level(
+#     let key1 = Morton::from_index_and_level([0, 0, 0], DEEPEST_LEVEL as usize - 1);
+#     let key2 = Morton::from_index_and_level(
 #         [
 #             LEVEL_SIZE as usize - 1,
 #             LEVEL_SIZE as usize - 1,
@@ -173,14 +173,14 @@ end
 
 #     assert_eq!(
 #         key1.finest_common_ancestor(key2),
-#         MortonKey::from_index_and_level([0, 0, 0], 0)
+#         Morton::from_index_and_level([0, 0, 0], 0)
 #     );
 
 #     // The finest ancestor of these two keys should be at level 1.
 
-#     let key1 = MortonKey::from_index_and_level([0, 0, 62], 6);
-#     let key2 = MortonKey::from_index_and_level([0, 0, 63], 6);
-#     let expected = MortonKey::from_index_and_level([0, 0, 31], 5);
+#     let key1 = Morton::from_index_and_level([0, 0, 62], 6);
+#     let key2 = Morton::from_index_and_level([0, 0, 63], 6);
+#     let expected = Morton::from_index_and_level([0, 0, 31], 5);
 
 #     assert_eq!(key1.finest_common_ancestor(key2), expected);
 

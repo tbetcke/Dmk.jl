@@ -1,13 +1,13 @@
 
-module MortonKey
+module Morton
 
 import ..Octree.Constants
 
-struct MKey
+struct MortonKey
     value::UInt64
 end
 
-Base.:(==)(a::MKey, b::MKey)::Bool = a.value == b.value
+Base.:(==)(a::MortonKey, b::MortonKey)::Bool = a.value == b.value
 
 "The largest possible key."
 function upper_bound()
@@ -16,17 +16,17 @@ end
 
 "Return an invalid key."
 function invalid_key()
-    MKey(Constants.HIGHEST_BIT_MASK)
+    MortonKey(Constants.HIGHEST_BIT_MASK)
 end
 
 "Check if a key is valid."
-function is_valid(key::MKey)::Bool
+function is_valid(key::MortonKey)::Bool
     key.value >> 63 !== 1
 end
 
 "Return the root key."
 function root()
-    MKey(0)
+    MortonKey(0)
 end
 
 """
@@ -34,7 +34,7 @@ end
 
 Create a key from an index and a level.
 """
-function from_index_and_level(x_index::UInt64, y_index::UInt64, z_index::UInt64, level::UInt64)::MKey
+function from_index_and_level(x_index::UInt64, y_index::UInt64, z_index::UInt64, level::UInt64)::MortonKey
 
     level_diff = Constants.DEEPEST_LEVEL - level
 
@@ -56,19 +56,19 @@ function from_index_and_level(x_index::UInt64, y_index::UInt64, z_index::UInt64,
            | Constants.Z_LOOKUP_ENCODE[1+(z&Constants.BYTE_MASK)])
 
     key = key << Constants.LEVEL_DISPLACEMENT
-    MKey(key | level)
+    MortonKey(key | level)
 
 
 end
 
 "Return the level of a key."
-function level(key::MKey)::UInt64
+function level(key::MortonKey)::UInt64
     key.value & Constants.LEVEL_MASK
 
 end
 
 "Decode a key into `(level, (x_index, y_index, z_index))`."
-function decode(key::MKey)::Tuple{UInt64,Tuple{UInt64,UInt64,UInt64}}
+function decode(key::MortonKey)::Tuple{UInt64,Tuple{UInt64,UInt64,UInt64}}
     function decode_key_helper(key::UInt64, lookup_table::Vector{UInt64})::UInt64
         N_LOOPS::UInt64 = 6
         coord::UInt64 = 0
@@ -80,7 +80,7 @@ function decode(key::MKey)::Tuple{UInt64,Tuple{UInt64,UInt64,UInt64}}
         coord
     end
 
-    level = MortonKey.level(key)
+    level = Morton.level(key)
 
     level_diff = Constants.DEEPEST_LEVEL - level
     key = key.value >> Constants.LEVEL_DISPLACEMENT
@@ -98,22 +98,22 @@ function decode(key::MKey)::Tuple{UInt64,Tuple{UInt64,UInt64,UInt64}}
 end
 
 "Return the parent of a key."
-function parent(key::MKey)::MKey
-    level = MortonKey.level(key)
+function parent(key::MortonKey)::MortonKey
+    level = Morton.level(key)
 
     @assert level > 0
 
     bit_displacement = Constants.LEVEL_DISPLACEMENT + 3 * (Constants.DEEPEST_LEVEL - level)
     mask = ~(7 << bit_displacement)
 
-    MKey((key.value & mask) - 1)
+    MortonKey((key.value & mask) - 1)
 end
 
 "Return true if `key` is an ancestor of or identical to `other_key`."
-function is_ancestor(key::MKey, other_key::MKey)::Bool
-    my_level = MortonKey.level(key)
-    other_level = MortonKey.level(other_key)
-    if ~MortonKey.is_valid(key) || ~MortonKey.is_valid(other_key)
+function is_ancestor(key::MortonKey, other_key::MortonKey)::Bool
+    my_level = Morton.level(key)
+    other_level = Morton.level(other_key)
+    if ~Morton.is_valid(key) || ~Morton.is_valid(other_key)
         return false
     end
 
@@ -132,14 +132,14 @@ function is_ancestor(key::MKey, other_key::MKey)::Bool
 
 end
 
-function finest_common_ancestor(key::MKey, other_key::MKey)::MKey
+function finest_common_ancestor(key::MortonKey, other_key::MortonKey)::MortonKey
 
     if key == other_key
         return key
     end
 
-    my_level = MortonKey.level(key)
-    other_level = MortonKey.level(other_key)
+    my_level = Morton.level(key)
+    other_level = Morton.level(other_key)
 
     # We bring both keys to the minimum of the two levels.
 
@@ -167,10 +167,37 @@ function finest_common_ancestor(key::MKey, other_key::MKey)::MKey
 
     first_key <<= 3 * (Constants.DEEPEST_LEVEL - new_level) + Constants.LEVEL_DISPLACEMENT
 
-    MKey(first_key | new_level)
-
+    MortonKey(first_key | new_level)
 end
 
+"Return true if the key is root."
+function is_root(key::MortonKey)::Bool
+    key == 0
+end
 
+"Return the children of a key."
+function children(key::MortonKey)::Tuple{MortonKey,MortonKey,MortonKey,MortonKey,MortonKey,MortonKey,MortonKey,MortonKey}
+
+    level = Morton.level(key)
+
+    @assert level < Constants.DEEPEST_LEVEL
+
+    child_level = level + 1
+
+    shift = Constants.LEVEL_DISPLACEMENT + 3 * (Constants.DEEPEST_LEVEL - child_level)
+
+    key = key.value
+
+    (MortonKey(1 + (key | 0 << shift)),
+        MortonKey(1 + (key | 1 << shift)),
+        MortonKey(1 + (key | 2 << shift)),
+        MortonKey(1 + (key | 3 << shift)),
+        MortonKey(1 + (key | 4 << shift)),
+        MortonKey(1 + (key | 5 << shift)),
+        MortonKey(1 + (key | 6 << shift)),
+        MortonKey(1 + (key | 7 << shift)))
+
+
+end
 
 end
