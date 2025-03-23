@@ -1,6 +1,10 @@
 using Dmk
 using Test
+using TestItemRunner
 
-@testset "Dmk.jl" begin
-    # Write your tests here.
-end
+# Write your tests here.
+
+include("morton.jl")
+
+
+@run_package_tests

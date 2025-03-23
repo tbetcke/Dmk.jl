@@ -3,11 +3,19 @@ uuid = "2e70eda1-e379-480b-be5f-6b294dd1451d"
 authors = ["Timo Betcke <timo.betcke@gmail.com> and contributors"]
 version = "1.0.0-DEV"
 
+[deps]
+TestItems = "1c621080-faea-4a02-84b6-bbd5e436b8fe"
+
 [compat]
+Test = "1.11.0"
+TestItemRunner = "1.1.0"
+TestItems = "1.0.0"
 julia = "1.6.7"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+TestItemRunner = "f8b46487-2199-4994-9208-9a1283c18c0a"
+
 
 [targets]
-test = ["Test"]
+test = ["Test", "TestItemRunner"]

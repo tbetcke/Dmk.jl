@@ -1,5 +1,7 @@
 # Define constants used for Octrees
 
+module Constants
+
 # The deepest possible level
 const DEEPEST_LEVEL::UInt64 = 16
 
@@ -229,3 +231,5 @@ const NCORNERS::UInt64 = 8
 
 # Mask for highest bit
 const HIGHEST_BIT_MASK::UInt64 = UInt64(1) << 63
+
+end
