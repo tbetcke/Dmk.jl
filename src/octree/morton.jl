@@ -7,9 +7,7 @@ struct MKey
     value::UInt64
 end
 
-function ==(key1::MKey, key2::MKey)::Bool
-    key1.value == key2.value
-end
+Base.:(==)(a::MKey, b::MKey)::Bool = a.value == b.value
 
 "The largest possible key."
 function upper_bound()
@@ -134,9 +132,9 @@ function is_ancestor(key::MKey, other_key::MKey)::Bool
 
 end
 
-function finest_common_ancestor(key::MKey, other_key::MKey)::Mkey
+function finest_common_ancestor(key::MKey, other_key::MKey)::MKey
 
-    if key.value == other.value
+    if key == other_key
         return key
     end
 

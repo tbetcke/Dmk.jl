@@ -131,7 +131,58 @@ end
     @test Dmk.Octree.MortonKey.is_ancestor(ancestor, key)
 end
 
+@testitem "finest common ancestor" begin
 
+    import Dmk.Octree.MortonKey: parent
+    import Dmk.Octree.Constants
+
+    index::Tuple{UInt64,UInt64,UInt64} = (15, 39, 45)
+    key = Dmk.Octree.MortonKey.from_index_and_level(index..., UInt64(9))
+    ancestor = parent(parent(key))
+
+    @test Dmk.Octree.MortonKey.finest_common_ancestor(key, ancestor) == ancestor
+
+    # The finest ancestor of the following keys should be the root of the tree.
+
+    key1 = Dmk.Octree.MortonKey.from_index_and_level(UInt64(0), UInt64(0), UInt64(0), Constants.DEEPEST_LEVEL - 1)
+    key2 = Dmk.Octree.MortonKey.from_index_and_level(Constants.LEVEL_SIZE - 1, Constants.LEVEL_SIZE - 1, Constants.LEVEL_SIZE - 1, Constants.DEEPEST_LEVEL)
+
+    @test Dmk.Octree.MortonKey.finest_common_ancestor(key1, key2) == Dmk.Octree.MortonKey.root()
+end
+
+# let index = [15, 39, 45];
+
+#     let key = MortonKey::from_index_and_level(index, 9);
+#     // The finest ancestor with itself is the key itself.
+#     assert_eq!(key.finest_common_ancestor(key), key);
+#     // Finest ancestor with ancestor two levels up is the ancestor.
+#     let ancestor = key.parent().parent();
+#     assert_eq!(key.finest_common_ancestor(ancestor), ancestor);
+
+#     // Finest ancestor  of the following keys should be the root of the tree.
+
+#     let key1 = MortonKey::from_index_and_level([0, 0, 0], DEEPEST_LEVEL as usize - 1);
+#     let key2 = MortonKey::from_index_and_level(
+#         [
+#             LEVEL_SIZE as usize - 1,
+#             LEVEL_SIZE as usize - 1,
+#             LEVEL_SIZE as usize - 1,
+#         ],
+#         DEEPEST_LEVEL as usize,
+#     );
+
+#     assert_eq!(
+#         key1.finest_common_ancestor(key2),
+#         MortonKey::from_index_and_level([0, 0, 0], 0)
+#     );
+
+#     // The finest ancestor of these two keys should be at level 1.
+
+#     let key1 = MortonKey::from_index_and_level([0, 0, 62], 6);
+#     let key2 = MortonKey::from_index_and_level([0, 0, 63], 6);
+#     let expected = MortonKey::from_index_and_level([0, 0, 31], 5);
+
+#     assert_eq!(key1.finest_common_ancestor(key2), expected);
 
 
 # fn test_z_encode_table() {
