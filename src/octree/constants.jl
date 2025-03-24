@@ -2,6 +2,8 @@
 
 module Constants
 
+import StaticArrays: SVector, @SVector
+
 # The deepest possible level
 const DEEPEST_LEVEL::Int64 = 16
 
@@ -11,34 +13,34 @@ const NLEVELS::Int64 = DEEPEST_LEVEL + 1
 # The number of elements along a single dimension in the deepest level
 const LEVEL_SIZE::Int64 = 65536
 
-const DIRECTIONS::Matrix{Int64} = [
-    [-1 -1 -1]
-    [-1 -1 0]
-    [-1 -1 1]
-    [-1 0 -1]
-    [-1 1 -1]
-    [-1 0 0]
-    [-1 0 1]
-    [-1 1 0]
-    [-1 1 1]
-    [0 -1 -1]
-    [1 -1 -1]
-    [0 -1 0]
-    [0 -1 1]
-    [1 -1 0]
-    [1 -1 1]
-    [0 0 -1]
-    [0 1 -1]
-    [1 0 -1]
-    [1 1 -1]
-    [0 0 1]
-    [0 1 0]
-    [0 1 1]
-    [1 0 0]
-    [1 0 1]
-    [1 1 0]
-    [1 1 1]
-]
+const DIRECTIONS::SVector{26,SVector{3,Int64}} = SVector{26,SVector{3,Int64}}(
+    SVector{3,Int64}(-1, -1, -1),
+    SVector{3,Int64}(-1, -1, 0),
+    SVector{3,Int64}(-1, -1, 1),
+    SVector{3,Int64}(-1, 0, -1),
+    SVector{3,Int64}(-1, 1, -1),
+    SVector{3,Int64}(-1, 0, 0),
+    SVector{3,Int64}(-1, 0, 1),
+    SVector{3,Int64}(-1, 1, 0),
+    SVector{3,Int64}(-1, 1, 1),
+    SVector{3,Int64}(0, -1, -1),
+    SVector{3,Int64}(1, -1, -1),
+    SVector{3,Int64}(0, -1, 0),
+    SVector{3,Int64}(0, -1, 1),
+    SVector{3,Int64}(1, -1, 0),
+    SVector{3,Int64}(1, -1, 1),
+    SVector{3,Int64}(0, 0, -1),
+    SVector{3,Int64}(0, 1, -1),
+    SVector{3,Int64}(1, 0, -1),
+    SVector{3,Int64}(1, 1, -1),
+    SVector{3,Int64}(0, 0, 1),
+    SVector{3,Int64}(0, 1, 0),
+    SVector{3,Int64}(0, 1, 1),
+    SVector{3,Int64}(1, 0, 0),
+    SVector{3,Int64}(1, 0, 1),
+    SVector{3,Int64}(1, 1, 0),
+    SVector{3,Int64}(1, 1, 1)
+)
 
 # Lookup tables for encoding 'z' position in a Morton encoding from Cartesian coordinates.
 const Z_LOOKUP_ENCODE::Vector{Int64} = [

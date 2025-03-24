@@ -3,6 +3,8 @@ module Morton
 
 import ..Octree.Constants
 
+import StaticArrays: SVector, @SVector
+
 struct MortonKey
     value::Int64
 end
@@ -113,7 +115,7 @@ end
 function is_ancestor(key::MortonKey, other_key::MortonKey)::Bool
     my_level = Morton.level(key)
     other_level = Morton.level(other_key)
-    if ~Morton.is_valid(key) || ~Morton.is_valid(other_key)
+    if !Morton.is_valid(key) || !Morton.is_valid(other_key)
         return false
     end
 
@@ -176,7 +178,7 @@ function is_root(key::MortonKey)::Bool
 end
 
 "Return the children of a key."
-function children(key::MortonKey)::Tuple{MortonKey,MortonKey,MortonKey,MortonKey,MortonKey,MortonKey,MortonKey,MortonKey}
+function children(key::MortonKey)::SVector{8,MortonKey}
 
     level = Morton.level(key)
 
@@ -188,7 +190,7 @@ function children(key::MortonKey)::Tuple{MortonKey,MortonKey,MortonKey,MortonKey
 
     key = key.value
 
-    (MortonKey(1 + (key | 0 << shift)),
+    SVector(MortonKey(1 + (key | 0 << shift)),
         MortonKey(1 + (key | 1 << shift)),
         MortonKey(1 + (key | 2 << shift)),
         MortonKey(1 + (key | 3 << shift)),
@@ -197,7 +199,33 @@ function children(key::MortonKey)::Tuple{MortonKey,MortonKey,MortonKey,MortonKey
         MortonKey(1 + (key | 6 << shift)),
         MortonKey(1 + (key | 7 << shift)))
 
-
 end
+
+"Return the siblings of a key"
+function siblings(key::MortonKey)::SVector{8,MortonKey}
+
+    @assert !Morton.is_root(key)
+    Morton.children(Morton.parent(key))
+end
+
+# "Return the neighbours of a key. If a direction has no neighbour an invalid key is returned for that direction."
+# function neighbours(key::MortonKey)::SVector{26,MortonKey}
+
+#     (level, (x_index, y_index, z_index)) = Morton.decode(key)
+
+#     if level == 0
+#         return @SVector [Morton.invalid_key() for i in 1:26]
+#     end
+
+#     level_size = 1 << level
+
+#     return @SVector [
+#         for d in Constants.DIRECTIONS
+
+#     ]
+
+
+# end
+
 
 end

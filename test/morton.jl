@@ -150,6 +150,44 @@ end
     @test Dmk.Octree.Morton.finest_common_ancestor(key1, key2) == Dmk.Octree.Morton.root()
 end
 
+@testitem "children of a key" begin
+
+    index = (15, 39, 45)
+    key = Dmk.Octree.Morton.from_index_and_level(index..., 9)
+    children = Dmk.Octree.Morton.children(key)
+
+    @assert length(children) == 8
+
+    for child in children
+        @test Dmk.Octree.Morton.parent(child) == key
+    end
+
+end
+
+@testitem "siblings of a key" begin
+
+    index = (15, 39, 45)
+    key = Dmk.Octree.Morton.from_index_and_level(index..., 9)
+    siblings = Dmk.Octree.Morton.siblings(key)
+
+    @assert length(siblings) == 8
+
+    for sibling in siblings
+        @test Dmk.Octree.Morton.parent(sibling) == Dmk.Octree.Morton.parent(key)
+    end
+end
+
+@testitem "neighbours of a key" begin
+
+    # Check neighbours of root
+    key = Dmk.Octree.Morton.root()
+    neighbours = Dmk.Octree.Morton.neighbours(key)
+
+end
+
+
+
+
 # let index = [15, 39, 45];
 
 #     let key = Morton::from_index_and_level(index, 9);
