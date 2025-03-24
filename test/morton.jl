@@ -183,6 +183,43 @@ end
     key = Dmk.Octree.Morton.root()
     neighbours = Dmk.Octree.Morton.neighbours(key)
 
+    # Take a single key in the interior and check all its neighbours
+
+    key = Dmk.Octree.Morton.from_index_and_level(15, 39, 45, 9)
+    neighbours = Dmk.Octree.Morton.neighbours(key)
+
+    for neighbour in neighbours
+        (n_level, (n_x, n_y, n_z)) = Dmk.Octree.Morton.decode(neighbour)
+        @test abs(n_x - 15) <= 1
+        @test abs(n_y - 39) <= 1
+        @test abs(n_z - 45) <= 1
+        @test n_level == 9
+        @test neighbour != key
+    end
+
+end
+
+@testitem "child index" begin
+
+    key = Dmk.Octree.Morton.from_index_and_level(15, 39, 45, 9)
+    children = Dmk.Octree.Morton.children(key)
+
+    for (index, child) in enumerate(children)
+        @test Dmk.Octree.Morton.child_index(child) + 1 == index
+    end
+
+end
+
+@testitem "finest outer descendent" begin
+    using Dmk.Octree.Morton
+    using Dmk.Octree.Constants
+
+    key = Morton.from_index_and_level(0, 0, 0, 1)
+    finest_outer_descendent = Morton.finest_outer_descendent(key)
+
+    @test finest_outer_descendent == Morton.from_index_and_level(0, 0, 0, Constants.DEEPEST_LEVEL)
+
+
 end
 
 

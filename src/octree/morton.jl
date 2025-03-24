@@ -10,6 +10,7 @@ struct MortonKey
 end
 
 Base.:(==)(a::MortonKey, b::MortonKey)::Bool = a.value == b.value
+Base.:copy(a::MortonKey)::MortonKey = MortonKey(a.value)
 
 "The largest possible key."
 function upper_bound()
@@ -208,24 +209,70 @@ function siblings(key::MortonKey)::SVector{8,MortonKey}
     Morton.children(Morton.parent(key))
 end
 
-# "Return the neighbours of a key. If a direction has no neighbour an invalid key is returned for that direction."
-# function neighbours(key::MortonKey)::SVector{26,MortonKey}
+"Return the neighbours of a key. If a direction has no neighbour an invalid key is returned for that direction."
+function neighbours(key::MortonKey)::SVector{26,MortonKey}
 
-#     (level, (x_index, y_index, z_index)) = Morton.decode(key)
+    (level, (x_index, y_index, z_index)) = Morton.decode(key)
 
-#     if level == 0
-#         return @SVector [Morton.invalid_key() for i in 1:26]
-#     end
+    if level == 0
+        return @SVector [Morton.invalid_key() for i in 1:26]
+    end
 
-#     level_size = 1 << level
+    level_size = 1 << level
 
-#     return @SVector [
-#         for d in Constants.DIRECTIONS
+    function compute_neighbour(x_index::Int64, y_index::Int64, z_index::Int64)::MortonKey
 
-#     ]
+        if x_index < 0 || x_index >= level_size || y_index < 0 || y_index >= level_size || z_index < 0 || z_index >= level_size
+            return Morton.invalid_key()
+        end
+
+        Morton.from_index_and_level(x_index, y_index, z_index, level)
+
+    end
+
+    return @SVector [compute_neighbour(x_index + d[1], y_index + d[2], z_index + d[3])
+                     for d in Constants.DIRECTIONS]
 
 
-# end
+end
 
+"Return the index of a child (between 0 and 7)"
+function child_index(key::MortonKey)::Int64
+    if key == Morton.root()
+        return 0
+    end
+
+    level = Morton.level(key)
+
+    shift = Constants.LEVEL_DISPLACEMENT + 3 * (Constants.DEEPEST_LEVEL - level)
+
+    ((key.value >> shift) % 8)
+end
+
+"Return the finest descendent that is opposite the joint corner with the siblings."
+function finest_outer_descendent(key::MortonKey)::MortonKey
+
+    if Morton.is_root(key)
+        return Morton.from_index_and_level(0, 0, 0, Constants.DEEPEST_LEVEL)
+    end
+
+    # Get the index of the current key as a child.
+
+    outer_index = Morton.child_index(key)
+    child_level = Morton.level(key)
+
+    new_key = copy(key)
+
+    while child_level <= Constants.DEEPEST_LEVEL
+        shift = Constants.LEVEL_DISPLACEMENT + 3 * (Constants.DEEPEST_LEVEL - child_level)
+        new_key = MortonKey(1 + (new_key.value | outer_index << shift))
+        child_level += 1
+    end
+
+    new_key
+
+
+
+end
 
 end
