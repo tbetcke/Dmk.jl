@@ -219,9 +219,29 @@ end
 
     @test finest_outer_descendent == Morton.from_index_and_level(0, 0, 0, Constants.DEEPEST_LEVEL)
 
+    key = Morton.from_index_and_level(Constants.LEVEL_SIZE - 1,
+        Constants.LEVEL_SIZE - 1,
+        Constants.LEVEL_SIZE - 1,
+        Constants.DEEPEST_LEVEL)
+
+    @test Morton.finest_outer_descendent(key) == key
+
+    @test Morton.finest_outer_descendent(Morton.parent(Morton.parent(Morton.parent(key)))) == key
+
 
 end
 
+@testitem "next deepest nondescendent key" begin
+    import Dmk.Octree.Morton
+    import Dmk.Octree.Constants
+
+    key = Morton.from_index_and_level(1, 1, 1, 1)
+    @test Morton.next_deepest_nondescendent_key(key) == Morton.invalid_key()
+
+    key = Morton.parent(Morton.parent(Morton.parent(Morton.deepest_last())))
+    Morton.next_deepest_nondescendent_key(Morton.children(key)[7]) == Morton.deepest_last()
+
+end
 
 
 
