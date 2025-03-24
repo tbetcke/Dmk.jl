@@ -4,24 +4,24 @@ module Morton
 import ..Octree.Constants
 
 struct MortonKey
-    value::UInt64
+    value::Int64
 end
 
 Base.:(==)(a::MortonKey, b::MortonKey)::Bool = a.value == b.value
 
 "The largest possible key."
 function upper_bound()
-    typemax(UInt64)
+    typemax(Int64)
 end
 
 "Return an invalid key."
 function invalid_key()
-    MortonKey(Constants.HIGHEST_BIT_MASK)
+    MortonKey(-1)
 end
 
 "Check if a key is valid."
 function is_valid(key::MortonKey)::Bool
-    key.value >> 63 !== 1
+    key.value >= 0
 end
 
 "Return the root key."
@@ -30,11 +30,11 @@ function root()
 end
 
 """
-    from_index_and_level(x_index::UInt64, y_index::UInt64, z_index::UInt64, level::UInt64)
+    from_index_and_level(x_index::Int64, y_index::Int64, z_index::Int64, level::Int64)
 
 Create a key from an index and a level.
 """
-function from_index_and_level(x_index::UInt64, y_index::UInt64, z_index::UInt64, level::UInt64)::MortonKey
+function from_index_and_level(x_index::Int64, y_index::Int64, z_index::Int64, level::Int64)::MortonKey
 
     level_diff = Constants.DEEPEST_LEVEL - level
 
@@ -62,16 +62,16 @@ function from_index_and_level(x_index::UInt64, y_index::UInt64, z_index::UInt64,
 end
 
 "Return the level of a key."
-function level(key::MortonKey)::UInt64
+function level(key::MortonKey)::Int64
     key.value & Constants.LEVEL_MASK
 
 end
 
 "Decode a key into `(level, (x_index, y_index, z_index))`."
-function decode(key::MortonKey)::Tuple{UInt64,Tuple{UInt64,UInt64,UInt64}}
-    function decode_key_helper(key::UInt64, lookup_table::Vector{UInt64})::UInt64
-        N_LOOPS::UInt64 = 6
-        coord::UInt64 = 0
+function decode(key::MortonKey)::Tuple{Int64,Tuple{Int64,Int64,Int64}}
+    function decode_key_helper(key::Int64, lookup_table::Vector{Int64})::Int64
+        N_LOOPS::Int64 = 6
+        coord::Int64 = 0
 
         for index in 0:N_LOOPS-1
             coord |= lookup_table[((key>>(index*9))&Constants.NINE_BIT_MASK)+1] << (3 * index)

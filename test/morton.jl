@@ -31,7 +31,7 @@ end
 @testitem "Decode Tables" begin
     using Dmk.Octree.Constants
 
-    for (index::UInt64, actual) in enumerate(Constants.Z_LOOKUP_DECODE)
+    for (index, actual) in enumerate(Constants.Z_LOOKUP_DECODE)
         index = index - 1
         expected = index & 1
         expected |= ((index >> 3) & 1) << 1
@@ -40,7 +40,7 @@ end
         @test actual == expected
     end
 
-    for (index::UInt64, actual) in enumerate(Constants.Y_LOOKUP_DECODE)
+    for (index, actual) in enumerate(Constants.Y_LOOKUP_DECODE)
         index = index - 1
         expected = (index >> 1) & 1
         expected |= ((index >> 4) & 1) << 1
@@ -49,7 +49,7 @@ end
         @test actual == expected
     end
 
-    for (index::UInt64, actual) in enumerate(Constants.X_LOOKUP_DECODE)
+    for (index, actual) in enumerate(Constants.X_LOOKUP_DECODE)
         index = index - 1
         expected = (index >> 2) & 1
         expected |= ((index >> 5) & 1) << 1
@@ -64,8 +64,8 @@ end
 @testitem "Encode tables" begin
     using Dmk.Octree.Constants
 
-    for (index::UInt64, actual) in enumerate(Constants.Z_LOOKUP_ENCODE)
-        sum::UInt64 = 0
+    for (index, actual) in enumerate(Constants.Z_LOOKUP_ENCODE)
+        sum = 0
 
         index = index - 1
 
@@ -77,8 +77,8 @@ end
         @test sum == actual
     end
 
-    for (index::UInt64, actual) in enumerate(Constants.Y_LOOKUP_ENCODE)
-        sum::UInt64 = 0
+    for (index, actual) in enumerate(Constants.Y_LOOKUP_ENCODE)
+        sum = 0
 
         index = index - 1
 
@@ -90,8 +90,8 @@ end
         @test sum == actual
     end
 
-    for (index::UInt64, actual) in enumerate(Constants.X_LOOKUP_ENCODE)
-        sum::UInt64 = 0
+    for (index, actual) in enumerate(Constants.X_LOOKUP_ENCODE)
+        sum = 0
 
         index = index - 1
 
@@ -107,8 +107,8 @@ end
 
 @testitem "parent" begin
 
-    index::Tuple{UInt64,UInt64,UInt64} = (15, 39, 45)
-    key = Dmk.Octree.Morton.from_index_and_level(index..., UInt64(9))
+    index = (15, 39, 45)
+    key = Dmk.Octree.Morton.from_index_and_level(index..., 9)
     parent = Dmk.Octree.Morton.parent(key)
 
     expected_index = (7, 19, 22)
@@ -123,8 +123,8 @@ end
 @testitem "ancestor" begin
     import Dmk.Octree.Morton: parent
 
-    index::Tuple{UInt64,UInt64,UInt64} = (15, 39, 45)
-    key = Dmk.Octree.Morton.from_index_and_level(index..., UInt64(9))
+    index = (15, 39, 45)
+    key = Dmk.Octree.Morton.from_index_and_level(index..., 9)
     @test Dmk.Octree.Morton.is_ancestor(key, key)
 
     ancestor = parent(parent(key))
@@ -136,15 +136,15 @@ end
     import Dmk.Octree.Morton: parent
     import Dmk.Octree.Constants
 
-    index::Tuple{UInt64,UInt64,UInt64} = (15, 39, 45)
-    key = Dmk.Octree.Morton.from_index_and_level(index..., UInt64(9))
+    index = (15, 39, 45)
+    key = Dmk.Octree.Morton.from_index_and_level(index..., 9)
     ancestor = parent(parent(key))
 
     @test Dmk.Octree.Morton.finest_common_ancestor(key, ancestor) == ancestor
 
     # The finest ancestor of the following keys should be the root of the tree.
 
-    key1 = Dmk.Octree.Morton.from_index_and_level(UInt64(0), UInt64(0), UInt64(0), Constants.DEEPEST_LEVEL - 1)
+    key1 = Dmk.Octree.Morton.from_index_and_level(0, 0, 0, Constants.DEEPEST_LEVEL - 1)
     key2 = Dmk.Octree.Morton.from_index_and_level(Constants.LEVEL_SIZE - 1, Constants.LEVEL_SIZE - 1, Constants.LEVEL_SIZE - 1, Constants.DEEPEST_LEVEL)
 
     @test Dmk.Octree.Morton.finest_common_ancestor(key1, key2) == Dmk.Octree.Morton.root()

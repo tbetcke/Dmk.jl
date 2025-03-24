@@ -3,13 +3,13 @@
 module Constants
 
 # The deepest possible level
-const DEEPEST_LEVEL::UInt64 = 16
+const DEEPEST_LEVEL::Int64 = 16
 
 # The number of levels
-const NLEVELS::UInt64 = DEEPEST_LEVEL + 1
+const NLEVELS::Int64 = DEEPEST_LEVEL + 1
 
 # The number of elements along a single dimension in the deepest level
-const LEVEL_SIZE::UInt64 = 65536
+const LEVEL_SIZE::Int64 = 65536
 
 const DIRECTIONS::Matrix{Int64} = [
     [-1 -1 -1]
@@ -41,7 +41,7 @@ const DIRECTIONS::Matrix{Int64} = [
 ]
 
 # Lookup tables for encoding 'z' position in a Morton encoding from Cartesian coordinates.
-const Z_LOOKUP_ENCODE::Vector{UInt64} = [
+const Z_LOOKUP_ENCODE::Vector{Int64} = [
     0x00000000, 0x00000001, 0x00000008, 0x00000009, 0x00000040, 0x00000041, 0x00000048, 0x00000049,
     0x00000200, 0x00000201, 0x00000208, 0x00000209, 0x00000240, 0x00000241, 0x00000248, 0x00000249,
     0x00001000, 0x00001001, 0x00001008, 0x00001009, 0x00001040, 0x00001041, 0x00001048, 0x00001049,
@@ -77,7 +77,7 @@ const Z_LOOKUP_ENCODE::Vector{UInt64} = [
 ]
 
 # Lookup tables for encoding 'y' position in a Morton encoding from Cartesian coordinates.
-const Y_LOOKUP_ENCODE::Vector{UInt64} = [
+const Y_LOOKUP_ENCODE::Vector{Int64} = [
     0x00000000, 0x00000002, 0x00000010, 0x00000012, 0x00000080, 0x00000082, 0x00000090, 0x00000092,
     0x00000400, 0x00000402, 0x00000410, 0x00000412, 0x00000480, 0x00000482, 0x00000490, 0x00000492,
     0x00002000, 0x00002002, 0x00002010, 0x00002012, 0x00002080, 0x00002082, 0x00002090, 0x00002092,
@@ -113,7 +113,7 @@ const Y_LOOKUP_ENCODE::Vector{UInt64} = [
 ]
 
 # Lookup tables for encoding 'x' position in a Morton encoding from Cartesian coordinates.
-const X_LOOKUP_ENCODE::Vector{UInt64} = [
+const X_LOOKUP_ENCODE::Vector{Int64} = [
     0x00000000, 0x00000004, 0x00000020, 0x00000024, 0x00000100, 0x00000104, 0x00000120, 0x00000124,
     0x00000800, 0x00000804, 0x00000820, 0x00000824, 0x00000900, 0x00000904, 0x00000920, 0x00000924,
     0x00004000, 0x00004004, 0x00004020, 0x00004024, 0x00004100, 0x00004104, 0x00004120, 0x00004124,
@@ -149,7 +149,7 @@ const X_LOOKUP_ENCODE::Vector{UInt64} = [
 ]
 
 # Lookup tables for decoding 'z' position in a Morton encoding from Cartesian coordinates.
-const Z_LOOKUP_DECODE::Vector{UInt64} = [
+const Z_LOOKUP_DECODE::Vector{Int64} = [
     0, 1, 0, 1, 0, 1, 0, 1, 2, 3, 2, 3, 2, 3, 2, 3, 0, 1, 0, 1, 0, 1, 0, 1, 2, 3, 2, 3, 2, 3, 2, 3,
     0, 1, 0, 1, 0, 1, 0, 1, 2, 3, 2, 3, 2, 3, 2, 3, 0, 1, 0, 1, 0, 1, 0, 1, 2, 3, 2, 3, 2, 3, 2, 3,
     4, 5, 4, 5, 4, 5, 4, 5, 6, 7, 6, 7, 6, 7, 6, 7, 4, 5, 4, 5, 4, 5, 4, 5, 6, 7, 6, 7, 6, 7, 6, 7,
@@ -169,7 +169,7 @@ const Z_LOOKUP_DECODE::Vector{UInt64} = [
 ]
 
 # Lookup tables for decoding 'y' position in a Morton encoding from Cartesian coordinates.
-const Y_LOOKUP_DECODE::Vector{UInt64} = [
+const Y_LOOKUP_DECODE::Vector{Int64} = [
     0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 2, 2, 3, 3, 2, 2, 3, 3, 2, 2, 3, 3, 2, 2, 3, 3,
     0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 2, 2, 3, 3, 2, 2, 3, 3, 2, 2, 3, 3, 2, 2, 3, 3,
     0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 2, 2, 3, 3, 2, 2, 3, 3, 2, 2, 3, 3, 2, 2, 3, 3,
@@ -189,7 +189,7 @@ const Y_LOOKUP_DECODE::Vector{UInt64} = [
 ]
 
 # Lookup tables for decoding 'x' position in a Morton encoding from Cartesian coordinates.
-const X_LOOKUP_DECODE::Vector{UInt64} = [
+const X_LOOKUP_DECODE::Vector{Int64} = [
     0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1,
     2, 2, 2, 2, 3, 3, 3, 3, 2, 2, 2, 2, 3, 3, 3, 3, 2, 2, 2, 2, 3, 3, 3, 3, 2, 2, 2, 2, 3, 3, 3, 3,
     0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1,
@@ -209,27 +209,27 @@ const X_LOOKUP_DECODE::Vector{UInt64} = [
 ]
 
 # Number of bits used for Level information.
-const LEVEL_DISPLACEMENT::UInt64 = 15
+const LEVEL_DISPLACEMENT::Int64 = 15
 
 # Mask for the last 15 bits.
-const LEVEL_MASK::UInt64 = 0x7FFF
+const LEVEL_MASK::Int64 = 0x7FFF
 
 # Mask for lowest order byte.
-const BYTE_MASK::UInt64 = 0xFF
+const BYTE_MASK::Int64 = 0xFF
 
 # Number of bits in a byte.
-const BYTE_DISPLACEMENT::UInt64 = 8
+const BYTE_DISPLACEMENT::Int64 = 8
 
 # Mask encapsulating a bit.
-const NINE_BIT_MASK::UInt64 = 0x1FF
+const NINE_BIT_MASK::Int64 = 0x1FF
 
 # Number of siblings for each node in octree
-const NSIBLINGS::UInt64 = 8
+const NSIBLINGS::Int64 = 8
 
 # Number of corners for each box.
-const NCORNERS::UInt64 = 8
+const NCORNERS::Int64 = 8
 
 # Mask for highest bit
-const HIGHEST_BIT_MASK::UInt64 = UInt64(1) << 63
+const HIGHEST_BIT_MASK::Int64 = 1 << 63
 
 end
