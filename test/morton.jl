@@ -403,3 +403,13 @@ end
 
 end
 
+@testitem "test from physical coordinate" begin
+
+    import Dmk.Octree.Morton
+
+    key = Morton.from_physical_coordinate(0.0, 0.0, 0.0, 2)
+
+    @test Morton.level(key) == 2
+    @test Morton.decode(key) == (2, (2, 2, 2))
+
+end

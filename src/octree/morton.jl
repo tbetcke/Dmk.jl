@@ -118,6 +118,29 @@ function decode(key::MortonKey)::Tuple{Int64,Tuple{Int64,Int64,Int64}}
 
 end
 
+"""
+    from_physical_coordinate(x::Float64, y::Float64, z::Float64, level::Int64)
+
+Create a Morton key from physical coordinates and a level. The coordinates are assumed to be strictly
+inside the cube [-1/2, 1/2]^3.
+
+"""
+function from_physical_coordinate(x::Float64, y::Float64, z::Float64, level::Int64)::MortonKey
+
+    @assert -0.5 < x < 0.5
+    @assert -0.5 < y < 0.5
+    @assert -0.5 < z < 0.5
+
+    level_size = 1 << level
+
+    x_index = floor(Int64, (x + 0.5) * level_size)
+    y_index = floor(Int64, (y + 0.5) * level_size)
+    z_index = floor(Int64, (z + 0.5) * level_size)
+
+    Morton.from_index_and_level(x_index, y_index, z_index, level)
+
+end
+
 "Return the parent of a key."
 function parent(key::MortonKey)::MortonKey
     level = Morton.level(key)
