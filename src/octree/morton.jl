@@ -16,6 +16,10 @@ Base.:(<=)(a::MortonKey, b::MortonKey)::Bool = a.value <= b.value
 Base.:(>)(a::MortonKey, b::MortonKey)::Bool = a.value > b.value
 Base.:(>=)(a::MortonKey, b::MortonKey)::Bool = a.value >= b.value
 
+function Base.isless(a::MortonKey, b::MortonKey)
+    a.value < b.value
+end
+
 "The largest possible key."
 function upper_bound()
     typemax(Int64)
@@ -314,6 +318,39 @@ function next_deepest_nondescendent_key(key::MortonKey)::MortonKey
 
 end
 
+"Get interior keys"
+function interior_keys(keys::T)::Set{MortonKey} where {T<:AbstractVector{MortonKey}}
+
+    result = Set{MortonKey}()
+
+    for key in keys
+        if Morton.is_root(key)
+            continue
+        end
+
+        p = Morton.parent(key)
+        while Morton.level(p) > 0 && !(p in result)
+            push!(result, p)
+            p = Morton.parent(p)
+        end
+    end
+
+    push!(result, Morton.root())
+
+    result
+end
+
+"Get all keys"
+function all_keys(keys::T)::Set{MortonKey} where {T<:AbstractVector{MortonKey}}
+
+    result = Morton.interior_keys(keys)
+    union!(result, keys)
+
+    result
+end
+
+
+
 "Linearize by removing duplicates and overlaps."
 function linearize(keys::T)::Vector{MortonKey} where {T<:AbstractVector{MortonKey}}
 
@@ -338,7 +375,7 @@ function linearize(keys::T)::Vector{MortonKey} where {T<:AbstractVector{MortonKe
 end
 
 "Fill the region between two keys with a minimal number of keys."
-function fill_between_keys(key1::MortonKey, key2::MortonKey)::Vec{MortonKey}
+function fill_between_keys(key1::MortonKey, key2::MortonKey)::Vector{MortonKey}
 
     # Make sure that key1 is smaller or equal key2
 
@@ -350,7 +387,7 @@ function fill_between_keys(key1::MortonKey, key2::MortonKey)::Vec{MortonKey}
     # is_ancestor is true if key1 is equal to key2.
 
     if Morton.is_ancestor(key1, key2)
-        return Vec{MortonKey}()
+        return Vector{MortonKey}()
     end
 
     # The finest common ancestor is always closer to the root than either key
@@ -361,7 +398,7 @@ function fill_between_keys(key1::MortonKey, key2::MortonKey)::Vec{MortonKey}
 
     result = Vector{MortonKey}()
 
-    work_set = copy(children)
+    work_set = Set(children)
 
     while !isempty(work_set)
         item = pop!(work_set)
@@ -379,7 +416,7 @@ function fill_between_keys(key1::MortonKey, key2::MortonKey)::Vec{MortonKey}
             # So if item is an ancestor of either its children cannot have a level larger than key1 or key2.
             if Morton.is_ancestor(item, key1) || Morton.is_ancestor(item, key2)
                 children = Morton.children(item)
-                append!(work_set, children)
+                push!(work_set, children...)
             end
         end
     end
@@ -390,8 +427,8 @@ function fill_between_keys(key1::MortonKey, key2::MortonKey)::Vec{MortonKey}
 
 end
 
-"Complete a tree ensuring that the given keys are part of the leafs."
-function complete_tree(keys::T)::Vector{MortonKey} where {T<:AbstractVector{MortonKey}}
+"Complete a region ensuring that the given keys are part of the leafs."
+function complete_region(keys::T)::Vector{MortonKey} where {T<:AbstractVector{MortonKey}}
 
     # First make sure that the input sequence is sorted.
     keys = sort(keys)
@@ -440,5 +477,120 @@ function complete_tree(keys::T)::Vector{MortonKey} where {T<:AbstractVector{Mort
     # We do not sort the keys. They are already sorted.
     result
 end
+
+"2:1 balance a tree given by a list of leaf keys. The result is not only balanced but also complete."
+function balance(keys::T)::Vector{MortonKey} where {T<:AbstractVector{MortonKey}}
+
+    if Morton.isempty(keys)
+        return Vector{MortonKey}()
+    end
+
+    deepest_level = maximum((key) -> Morton.level(key), keys)
+
+    if deepest_level == 0
+        return [Morton.root()]
+    end
+
+    # Start with keys at deepest level
+
+    work_list = filter((key) -> Morton.level(key) == deepest_level, keys)
+
+    result = Vector{MortonKey}()
+
+    for level in deepest_level:-1:1
+        parents = Set{MortonKey}()
+        new_work_list = Vector{MortonKey}()
+
+        for key in work_list
+            parent = Morton.parent(key)
+            if !(parent in parents)
+                push!(parents, parent)
+                append!(result, Morton.siblings(key))
+                append!(new_work_list, filter((key) -> Morton.is_valid(key), Morton.neighbours(parent)))
+            end
+        end
+
+        append!(new_work_list, filter((key) -> Morton.level(key) == level - 1, keys))
+
+        work_list = new_work_list
+    end
+
+    Morton.linearize(result)
 end
 
+"Return true if a vector of keys is linear."
+function is_linear(keys::T)::Bool where {T<:AbstractVector{MortonKey}}
+
+    if isempty(keys)
+        return true
+    end
+
+    for (key1, key2) in zip(keys[1:end-1], keys[2:end])
+        if key1 >= key2 || Morton.is_ancestor(key1, key2)
+            return false
+        end
+    end
+
+    true
+
+end
+
+"Return true if a vector of keys is complete."
+function is_complete(keys::T)::Bool where {T<:AbstractVector{MortonKey}}
+
+    if isempty(keys)
+        return false
+    end
+
+    # Get the interior keys
+
+    interior_keys = Morton.interior_keys(keys)
+
+    # Get all keys
+
+    all_keys = Morton.all_keys(keys)
+
+    # Make sure that all 8 children of each interior key are in the set of all keys.
+
+    for key in interior_keys
+        children = Morton.children(key)
+        for child in children
+            if !(child in all_keys)
+                return false
+            end
+        end
+    end
+
+    true
+
+end
+
+"Return true if a vector of keys is linear, complete and balanced."
+function is_linear_complete_and_balanced(keys::T)::Bool where {T<:AbstractVector{MortonKey}}
+
+    if isempty(keys)
+        return false
+    end
+
+    # We add for each key the neighbours of the parents and linearize. If the key was balanced
+    # this will give the same result as the input.
+
+    new_keys = Vector{MortonKey}()
+
+    for key in keys
+        push!(new_keys, key, filter((key) -> Morton.is_valid(key), Morton.neighbours(Morton.parent(key)))...)
+    end
+
+    new_keys = Morton.linearize(new_keys)
+
+    for (key1, key2) in zip(keys, new_keys)
+        if key1 != key2
+            return false
+        end
+    end
+
+    true
+
+
+end
+end

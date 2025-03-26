@@ -244,111 +244,162 @@ end
 end
 
 
+@testitem "fill between keys" begin
+    import Dmk.Octree.Morton: MortonKey, fill_between_keys, is_complete
+    import Dmk.Octree.Morton
 
-# let index = [15, 39, 45];
+    function sanity_check(key1::MortonKey, key2::MortonKey, keys::Vector{MortonKey})
+        max_level = max(Morton.level(key1), Morton.level(key2))
 
-#     let key = Morton::from_index_and_level(index, 9);
-#     // The finest ancestor with itself is the key itself.
-#     assert_eq!(key.finest_common_ancestor(key), key);
-#     // Finest ancestor with ancestor two levels up is the ancestor.
-#     let ancestor = key.parent().parent();
-#     assert_eq!(key.finest_common_ancestor(ancestor), ancestor);
+        keys = [key1; keys; key2]
 
-#     // Finest ancestor  of the following keys should be the root of the tree.
+        for (k1, k2) in zip(keys[1:end-1], keys[2:end])
+            @test k1 < k2
+            @test !Morton.is_ancestor(k1, k2)
+        end
 
-#     let key1 = Morton::from_index_and_level([0, 0, 0], DEEPEST_LEVEL as usize - 1);
-#     let key2 = Morton::from_index_and_level(
-#         [
-#             LEVEL_SIZE as usize - 1,
-#             LEVEL_SIZE as usize - 1,
-#             LEVEL_SIZE as usize - 1,
-#         ],
-#         DEEPEST_LEVEL as usize,
-#     );
+        for k in keys
+            @test Morton.level(k) <= max_level
+        end
+    end
 
-#     assert_eq!(
-#         key1.finest_common_ancestor(key2),
-#         Morton::from_index_and_level([0, 0, 0], 0)
-#     );
+    key1 = Morton.from_index_and_level(0, 1, 0, 4)
+    key2 = Morton.from_index_and_level(8, 4, 13, 4)
+    keys = fill_between_keys(key1, key2)
 
-#     // The finest ancestor of these two keys should be at level 1.
+    @test !isempty(keys)
 
-#     let key1 = Morton::from_index_and_level([0, 0, 62], 6);
-#     let key2 = Morton::from_index_and_level([0, 0, 63], 6);
-#     let expected = Morton::from_index_and_level([0, 0, 31], 5);
+    sanity_check(key1, key2, keys)
 
-#     assert_eq!(key1.finest_common_ancestor(key2), expected);
+    # Correct result for passing same key twice
+
+    keys = Morton.fill_between_keys(key1, key1)
+    @test isempty(keys)
+
+    # Two consecutive keys should also be empty.
+
+    children = Morton.children(key2)
+    keys = Morton.fill_between_keys(children[1], children[2])
+    @test isempty(keys)
 
 
-# fn test_z_encode_table() {
-#     for (mut index, actual) in Z_LOOKUP_ENCODE.iter().enumerate() {
-#         let mut sum: u64 = 0;
+    # The following should have deepest level same as the level of key2.
 
-#         for shift in 0..8 {
-#             sum |= ((index & 1) << (3 * shift)) as u64;
-#             index >>= 1;
-#         }
+    key1 = Morton.children(Morton.root())[1]
+    key2 = Morton.children(Morton.children(Morton.root())[8])[8]
 
-#         assert_eq!(sum, *actual);
-#     }
-# }
+    keys = Morton.fill_between_keys(key1, key2)
+    max_level = maximum((key) -> Morton.level(key), keys)
 
-# fn test_z_decode_table() {
-#     for (index, &actual) in Z_LOOKUP_DECODE.iter().enumerate() {
-#         let mut expected: u64 = (index & 1) as u64;
-#         expected |= (((index >> 3) & 1) << 1) as u64;
-#         expected |= (((index >> 6) & 1) << 2) as u64;
+    @test max_level == 2
 
-#         assert_eq!(actual, expected);
-#     }
-# }
+    # Also check that the resulting keys are complete.
 
-# @testset "Morton encoding and decoding" begin
-#     @testset "Morton encoding" begin
-#         @test "Root key" begin
-#             key = root()
-#             @test is_valid(key)
-#             @test level(key) == 0
-#             @test decode(key) == (0, (0, 0, 0))
-#         end
+    @test is_complete([key1; keys; key2])
 
-#         @test "Invalid key" begin
-#             key = invalid_key()
-#             @test !is_valid(key)
-#         end
 
-#         @test "Key from index and level" begin
-#             key = from_index_and_level(1, 1, 1, 0)
-#             @test is_valid(key)
-#             @test level(key) == 0
-#             @test decode(key) == (0, (0, 0, 0))
+end
 
-#             key = from_index_and_level(1, 1, 1, 1)
-#             @test is_valid(key)
-#             @test level(key) == 1
-#             @test decode(key) == (1, (0, 0, 0))
+@testitem "test complete tree" begin
+    import Dmk.Octree.Morton
+    import Dmk.Octree.Morton: MortonKey
 
-#             key = from_index_and_level(2, 2, 2, 1)
-#             @test is_valid(key)
-#             @test level(key) == 1
-#             @test decode(key) == (73, (1, 1, 1))
+    function sanity_checks(keys::Vector{MortonKey}, complete_region::Vector{MortonKey})
 
-#             key = from_index_and_level(2, 2, 2, 2)
-#             @test is_valid(key)
-#             @test level(key) == 2
-#             @test decode(key) == (292, (2, 2, 2))
+        # Check that the returned region is linear
+        @test Morton.is_linear(complete_region)
 
-#             key = from_index_and_level(4, 4, 4, 3)
-#             @test is_valid(key)
-#             @test level(key) == 3
-#             @test decode(key) == (1176, (4, 4, 4))
+        # Check that the first key of the region is an ancestor of the first key of the deepest level
+        # and that the last key of the region is an ancestor of the last key of the deepest level.
 
-#             key = from_index_and_level(8, 8, 8, 4)
-#             @test is_valid(key)
-#             @test level(key) == 4
-#             @test decode(key) == (4704, (8, 8, 8))
+        deepest_first = Morton.deepest_first()
+        deepest_last = Morton.deepest_last()
 
-#             key = from_index_and_level(16, 16, 16, 5)
-#             @test is_valid(key)
-#             @test level(key) == 5
-#             @test decode(key) == (18816, (16, 16,
+        @test Morton.is_ancestor(complete_region[1], deepest_first)
+        @test Morton.is_ancestor(complete_region[end], deepest_last)
+
+        # Check that the original keys are all contained in the complete region.
+
+        for key in keys
+            @test key in complete_region
+        end
+
+        # Check that the maximum level of the complete region is not higher than the maximum level of the input keys.
+
+        max_level = maximum((key) -> Morton.level(key), keys)
+        @test maximum((key) -> Morton.level(key), complete_region) <= max_level
+    end
+
+    # Create 3 Morton keys around which to complete region. The keys are not sorted.
+
+    key1 = Morton.from_index_and_level(17, 30, 55, 10)
+    key2 = Morton.from_index_and_level(17, 540, 55, 10)
+    key3 = Morton.from_index_and_level(17, 30, 799, 11)
+
+    keys = [key1, key2, key3]
+
+    complete_region = Morton.complete_region(keys)
+
+    sanity_checks(keys, complete_region)
+
+    # For an empty slice the complete region method should just add the root of the tree.
+    keys = Vector{MortonKey}()
+    complete_region = Morton.complete_region(keys)
+    @test length(complete_region) == 1
+    @test complete_region[1] == Morton.root()
+
+    # Choose a region where the first and last key are ancestors of deepest first and deepest last.
+
+    keys = [Morton.deepest_first(), Morton.deepest_last()]
+
+    complete_region = Morton.complete_region(keys)
+
+    sanity_checks(keys, complete_region)
+
+
+end
+
+@testitem "test balancing" begin
+    import Dmk.Octree.Morton
+
+    balanced = Morton.balance([Morton.from_index_and_level(0, 1, 0, 2)])
+
+    @test Morton.is_linear_complete_and_balanced(balanced)
+
+    key1 = Morton.from_index_and_level(17, 35, 48, 9)
+    key2 = Morton.from_index_and_level(355, 25, 67, 9)
+    key3 = Morton.from_index_and_level(0, 0, 0, 8)
+
+    balanced = Morton.balance([key1, key2, key3])
+
+    @test Morton.is_linear_complete_and_balanced(balanced)
+
+    # We start with all keys on level 1. We recurse twice down and replace
+    # the first key by its descendents two levels down and linearize. The
+    # resulting octree is complete and linear but not balanced.
+
+    keys = Vector{Morton.MortonKey}(Morton.children(Morton.root()))
+    descendents = Morton.children(keys[1])
+
+    for key in descendents
+        append!(keys, Morton.children(key))
+    end
+
+    keys = Morton.linearize(keys)
+
+    # This tree is complete and linear but not balanced.
+
+    @test Morton.is_linear(keys)
+    @test Morton.is_complete(keys)
+    @test !Morton.is_linear_complete_and_balanced(keys)
+
+    # We now balance it
+
+    keys = Morton.balance(keys)
+
+    # Check again
+
+    @test Morton.is_linear_complete_and_balanced(keys)
+
+end
+
