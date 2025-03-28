@@ -4,10 +4,12 @@ authors = ["Timo Betcke <timo.betcke@gmail.com> and contributors"]
 version = "1.0.0-DEV"
 
 [deps]
+BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 TestItems = "1c621080-faea-4a02-84b6-bbd5e436b8fe"
 
 [compat]
+BenchmarkTools = "1.6.0"
 StaticArrays = "1.9.13"
 Test = "1.11.0"
 TestItemRunner = "1.1.0"
