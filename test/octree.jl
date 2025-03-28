@@ -6,6 +6,11 @@ using TestItemRunner
 @testitem "test bin sorting" begin
     using Dmk.Octree
 
+    sorted_keys = [1, 2, 3, 4, 5]
+    bins = [1, 3, 4]
+    counts = Octree.sort_to_bins(sorted_keys, bins)
+    @test counts == [2, 1, 2]
+
     sorted_keys = [1, 2, 4, 5, 6, 19]
     bins = [1, 3, 4]
 
