@@ -110,25 +110,32 @@ function sort_to_bins(sorted_keys::T, bins::V)::Vector{Int64} where {S,T<:Abstra
 
     count = 0
     idx = 1
+    bins_exhausted = false
 
     for key in sorted_keys
+        if bins_exhausted
+            # We tried all finite bins but none fits.
+            # Hence, break out of the loop.
+            break
+        end
         # The key falls into the current bin
         if bins[idx] <= key < bins[idx+1]
             bin_counts[idx] += 1
             count += 1
         else
-            # Move the bin forward until it fits. There will always be a fitting bin.
-            while idx < nbins
+            # Move the bin forward until it fits.
+            while idx < nbins - 1
+                idx += 1
                 if bins[idx] <= key < bins[idx+1]
+                    # The bin fits. Proceed as normal and break out of the
+                    # inner while loop.
                     bin_counts[idx] += 1
                     count += 1
                     break
+                elseif idx == nbins - 1
+                    # We have no more fitting bins. Set the corresponding flag.
+                    bins_exhausted = true
                 end
-                idx += 1
-            end
-            if idx == nbins
-                # We have no more fitting bins. So break the outer loop
-                break
             end
         end
     end
