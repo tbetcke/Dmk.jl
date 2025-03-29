@@ -6,14 +6,27 @@ include("constants.jl")
 include("morton.jl")
 
 import .Morton: MortonKey
+import .Constants
+
+@enum KeyType leaf interior
+
+struct KeyInformation
+    neighbours::Vector{MortonKey}
+    key_type::KeyType
+end
+
+"""
+    AdaptiveOctree
+"""
 struct AdaptiveOctree
     max_depth::Int64
     number_of_points::Int64
     points::Array{Float64,2}
     point_morton_indices::Vector{Morton.MortonKey}
-    refined_tree::Vector{Morton.MortonKey}
+    leaf_keys::Vector{Morton.MortonKey}
     leaf_to_points::Dict{Morton.MortonKey,Vector{Int64}}
     points_to_leafs::Vector{Morton.MortonKey}
+    all_keys::Dict{MortonKey,KeyInformation}
 end
 
 """
@@ -23,20 +36,21 @@ Constructs an adaptive octree from the given `points` with a maximum depth of `m
 """
 function adaptive_octree(points::Array{Float64,2}, max_depth::Int64, max_points_per_box::Int64)
 
-    @assert size(points, 1) == 3
+    @assert max_depth <= Constants.DEEPEST_LEVEL
 
     number_of_points = size(points, 2)
-    point_morton_indices = Vector{Morton.MortonKey}(undef, number_of_points)
 
-    for i in 1:number_of_points
-        point_morton_indices[i] = Morton.from_physical_coordinate(points[:, i]..., max_depth)
-    end
+    # Compute Morton keys from points
+    point_morton_keys = points_to_keys(points)
+
 
     # Sort the points by their Morton keys.
-    sorted_indices = sortperm(point_morton_indices)
+    sorted_indices = sortperm(point_morton_keys)
     # Now generate the refined tree with the sorted order of keys.
-    sorted_point_keys = point_morton_indices[sorted_indices]
-    refined_tree = refine_tree(MortonKey(0), sorted_point_keys, max_depth, max_points_per_box)
+    sorted_point_keys = point_morton_keys[sorted_indices]
+    refined_tree = refine_tree(Morton.root(), sorted_point_keys, max_depth, max_points_per_box)
+    # Balance the refined tree
+    refined_tree = Morton.balance(refined_tree)
     # The refined tree is also sorted. We use the refined tree keys as bins to sort the points accordingly.
     counts = sort_to_bins(sorted_point_keys, refined_tree)
     #We now know how many points are associated with each leaf key. We hence create a dictionary that maps from
@@ -57,7 +71,85 @@ function adaptive_octree(points::Array{Float64,2}, max_depth::Int64, max_points_
         end
     end
 
-    AdaptiveOctree(max_depth, number_of_points, points, point_morton_indices, refined_tree, leaf_to_points, points_to_leafs)
+    key_information = compute_key_information(refined_tree)
+    AdaptiveOctree(max_depth, number_of_points, points, point_morton_keys, refined_tree, leaf_to_points, points_to_leafs, key_information)
+
+end
+
+function compute_key_information(leaf_keys::Vector{MortonKey})::Dict{MortonKey,KeyInformation}
+
+    key_information = Dict{MortonKey,KeyInformation}()
+    key_to_neighbours = Dict{MortonKey,Set{MortonKey}}()
+
+    interior_keys = Morton.interior_keys(leaf_keys)
+
+    # First we add all interior keys. We know that interior keys
+    # have neighbours on the same level.
+    for key in interior_keys
+        key_to_neighbours[key] = Set{MortonKey}(filter((key) -> Morton.is_valid(key), Morton.neighbours(key)))
+    end
+
+    # We then add the leaf keys and leave them empty for now.
+
+    for key in leaf_keys
+        key_to_neighbours[key] = Set{MortonKey}()
+    end
+
+    deepest_level = maximum((key) -> Morton.level(key), leaf_keys)
+
+    # We start on the deepest level and add neighbours on the same level or one level higher.
+
+    for level in deepest_level:-1:1
+        keys = filter((key) -> Morton.level(key) == level, leaf_keys)
+        for key in keys
+            my_neighbours = filter((key) -> Morton.is_valid(key), Morton.neighbours(key))
+            for potential_neighbour in my_neighbours
+                # First check if the neighbour is on the same level
+                if haskey(key_to_neighbours, potential_neighbour)
+                    push!(key_to_neighbours[key], potential_neighbour)
+                else
+                    # Neighbour must be one level lower. It cannot be on a higher level
+                    # because then the neighbour would have an interior key as neighbour
+                    # on the same level and we would not be in the else branch.
+                    parent = Morton.parent(potential_neighbour)
+                    @assert haskey(key_to_neighbours, parent)
+                    push!(key_to_neighbours[key], parent)
+                end
+            end
+        end
+
+    end
+
+    # We now have the neighbour information. Convert this to arrays and store the key information.
+
+    for key in leaf_keys
+        key_information[key] = KeyInformation(collect(key_to_neighbours[key]), leaf)
+    end
+
+    for key in interior_keys
+        key_information[key] = KeyInformation(collect(key_to_neighbours[key]), interior)
+    end
+
+    key_information
+
+end
+
+"""
+    points_to_keys(points::Array{Float64,2}) -> Vector{MortonKey}
+
+"""
+function points_to_keys(points::Array{Float64,2})::Vector{MortonKey}
+
+    @assert size(points, 1) == 3
+
+    number_of_points = size(points, 2)
+    point_morton_indices = Vector{Morton.MortonKey}(undef, number_of_points)
+
+    for i in 1:number_of_points
+        point_morton_indices[i] = Morton.from_physical_coordinate(points[:, i]..., Constants.DEEPEST_LEVEL)
+    end
+
+    point_morton_indices
 
 end
 
@@ -151,6 +243,5 @@ function sort_to_bins(sorted_keys::T, bins::V)::Vector{Int64} where {S,T<:Abstra
 
     bin_counts
 end
-
 
 end
