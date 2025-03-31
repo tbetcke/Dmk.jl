@@ -45,11 +45,11 @@ end
     for i in axes(values, 1)
         for j in axes(values, 2)
             values[i, j] = exp.(-(3 * cheb_points_x[j]^2 + 5 * cheb_points_y[i]^2))
-            Ì
+
         end
     end
 
-    expected_values = zeros(npy, npx)Ì
+    expected_values = zeros(npy, npx)
 
     for i in axes(expected_values, 1)
         for j in axes(expected_values, 2)
@@ -59,7 +59,6 @@ end
     end
 
     actual_values = Chebychev.evaluate2d(eval_x, eval_y, values)
-    println("Error: ", maximum(abs.((expected_values - actual_values) ./ (expected_values))))
 
     @test maximum(abs.((expected_values - actual_values) ./ (expected_values))) < 1E-14
 
