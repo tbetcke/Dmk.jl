@@ -43,7 +43,7 @@ end
 @testitem "test chebychev polynomial 2d" begin
     import Dmk.Chebychev
     using LinearAlgebra
-    import SIMD: Vec
+    import SIMD
 
 
     m = 40
@@ -94,10 +94,10 @@ end
     end
 
 
-    simd_values = zeros(Vec{2,Float64}, m, n)
+    simd_values = zeros(SIMD.Vec{2,Float64}, m, n)
     for i in axes(values, 1)
         for j in axes(values, 2)
-            simd_values[i, j] = Vec{2,Float64}((values1[i, j], values2[i, j]))
+            simd_values[i, j] = SIMD.Vec{2,Float64}((values1[i, j], values2[i, j]))
         end
     end
 
@@ -167,7 +167,7 @@ end
             end
         end
     end
-    actual_values = Chebychev.evaluate3d_tensor(eval_x, eval_y, eval_z, values)
+    actual_values = Chebychev.evaluate3d_tensor_1x(eval_x, eval_y, eval_z, values)
     @test maximum(abs.((expected_values - actual_values) ./ (expected_values))) < 1E-14
 
 
@@ -187,28 +187,6 @@ end
         end
     end
 
-
-    simd_values = zeros(Vec{2,Float64}, m, n, p)
-    for i in axes(values, 1)
-        for j in axes(values, 2)
-            for k in axes(values, 3)
-                simd_values[i, j, k] = Vec{2,Float64}((values1[i, j, k], values2[i, j, k]))
-            end
-        end
-    end
-
-    actual_values = Chebychev.evaluate3d_tensor(eval_x, eval_y, eval_z, simd_values)
-    actual_values1 = zeros(npx, npy, npz)
-    actual_values2 = zeros(npx, npy, npz)
-    for i in axes(actual_values, 1)
-        for j in axes(actual_values, 2)
-            for k in axes(actual_values, 3)
-                actual_values1[i, j, k] = getindex(actual_values[i, j, k], 1)
-                actual_values2[i, j, k] = getindex(actual_values[i, j, k], 2)
-            end
-        end
-    end
-
     expected_values1 = zeros(npx, npy, npz)
     expected_values2 = zeros(npx, npy, npz)
     for i in axes(expected_values1, 1)
@@ -219,6 +197,8 @@ end
             end
         end
     end
+
+    (actual_values1, actual_values2) = Chebychev.evaluate3d_tensor_2x(eval_x, eval_y, eval_z, values1, values2)
 
     @test maximum(abs.((expected_values1 - actual_values1) ./ (expected_values1))) < 1E-14
     @test maximum(abs.((expected_values2 - actual_values2) ./ (expected_values2))) < 1E-14
@@ -265,7 +245,7 @@ end
         exp.(-(3 * points[1, i]^2 + 5 * points[2, i]^2 + 6 * points[3, i]^2)) for i in axes(points, 2)
     ]
     @test maximum(abs.((expected_values - actual_values) ./ (expected_values))) == 0
-
+    Ì
 
 
 

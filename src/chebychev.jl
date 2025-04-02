@@ -87,11 +87,16 @@ function evaluate1d(eval_points, values)
     @assert length(values) > 0
 
     n = length(values)
+
+    # Now build the SIMD vector
+
     cheb_points = Chebychev.cheb_points(n)
     weights = Chebychev.cheb_weights(n)
     return evaluate1d_impl(eval_points, values, cheb_points, weights)
 
+
 end
+
 
 
 """
@@ -153,7 +158,7 @@ end
 # - `values::AbstractArray{S, 3}`: The values of the interpolant at the Chebychev points. The first axis is the x dimension.
 #    The second axis is the y dimension. The third is the z dimension.
 # """
-function evaluate3d_tensor(eval_x, eval_y, eval_z, values)
+function evaluate3d_tensor_impl(eval_x, eval_y, eval_z, values)
 
     # The first axis is the z-dimension
     # So m is the number of Chebychev points in x direction
@@ -209,6 +214,94 @@ function evaluate3d_tensor(eval_x, eval_y, eval_z, values)
 
     return res3
 end
+
+function evaluate3d_tensor_1x(eval_x::AbstractVector{S}, eval_y::AbstractVector{S}, eval_z::AbstractVector{S}, values::AbstractArray{S,3}) where {S<:Real}
+
+    return evaluate3d_tensor_impl(eval_x, eval_y, eval_z, values)
+
+end
+
+
+function evaluate3d_tensor_2x(eval_x::AbstractVector{S}, eval_y::AbstractVector{S}, eval_z::AbstractVector{S}, values1::AbstractArray{S,3}, values2::AbstractArray{S,3}) where {S<:Real}
+
+    @assert size(values1) == size(values2)
+    simd_values = zeros(Vec{2,S}, size(values1, 1), size(values1, 2), size(values1, 3))
+    for i in axes(values1, 1)
+        for j in axes(values1, 2)
+            for k in axes(values1, 3)
+                simd_values[i, j, k] = Vec{2,S}((values1[i, j, k], values2[i, j, k]))
+            end
+        end
+    end
+
+    simd_result = evaluate3d_tensor_impl(eval_x, eval_y, eval_z, simd_values)
+
+    return (getindex.(simd_result, 1), getindex.(simd_result, 2))
+
+end
+
+function evaluate3d_tensor_4x(eval_x::AbstractVector{S}, eval_y::AbstractVector{S}, eval_z::AbstractVector{S}, values1::AbstractArray{S,3}, values2::AbstractArray{S,3}, value3::AbstractArray{S,3}, value4::AbstractArray{S,3}) where {S<:Real}
+
+    @assert size(values1) == size(values2) == size(value3) == size(value4)
+    simd_values = zeros(Vec{4,S}, size(values1, 1), size(values1, 2), size(values1, 3))
+    for i in axes(values1, 1)
+        for j in axes(values1, 2)
+            for k in axes(values1, 3)
+                simd_values[i, j, k] = Vec{4,S}((values1[i, j, k], values2[i, j, k], values3[i, j, k], values4[i, j, k]))
+            end
+        end
+    end
+
+    simd_result = evaluate3d_tensor_impl(eval_x, eval_y, eval_z, simd_values)
+
+
+    return (getindex.(simd_result, 1), getindex.(simd_result, 2), getindex.(simd_result, 3), getindex.(simd_result, 4))
+
+end
+
+function evaluate3d_tensor_8x(eval_x::AbstractVector{S}, eval_y::AbstractVector{S}, eval_z::AbstractVector{S},
+    values1::AbstractArray{S,3}, values2::AbstractArray{S,3}, value3::AbstractArray{S,3}, value4::AbstractArray{S,3}, value5::AbstractArray{S,3}, value6::AbstractArray{S,3}, value7::AbstractArray{S,3}, value8::AbstractArray{S,3}) where {S<:Real}
+
+    @assert size(values1) == size(values2) == size(value3) == size(value4) == size(value5) == size(value6) == size(value7) == size(value8)
+    simd_values = zeros(Vec{8,S}, size(values1, 1), size(values1, 2), size(values1, 3))
+    for i in axes(values1, 1)
+        for j in axes(values1, 2)
+            for k in axes(values1, 3)
+                simd_values[i, j, k] = Vec{8,S}((values1[i, j, k], values2[i, j, k], values3[i, j, k], values4[i, j, k], values5[i, j, k], values6[i, j, k], values7[i, j, k], values8[i, j, k]))
+            end
+        end
+    end
+
+    simd_result = evaluate3d_tensor_impl(eval_x, eval_y, eval_z, simd_values)
+    return (getindex.(simd_result, 1), getindex.(simd_result, 2), getindex.(simd_result, 3), getindex.(simd_result, 4), getindex.(simd_result, 5), getindex.(simd_result, 6), getindex.(simd_result, 7), getindex.(simd_result, 8))
+
+end
+
+function evaluate3d_tensor_1x(eval_x::AbstractVector{S}, eval_y::AbstractVector{S}, eval_z::AbstractVector{S}, values::AbstractArray{S,3}) where {S<:Complex}
+
+    return Complex.(evaluate3d_tensor_1x(eval_x, eval_y, eval_z, real(values)), evaluate3d_tensor_1x(eval_x, eval_y, eval_z, imag(values)))
+
+end
+
+function evaluate3d_tensor_2x(eval_x::AbstractVector{S}, eval_y::AbstractVector{S}, eval_z::AbstractVector{S}, values1::AbstractArray{S,3}, values2::AbstractArray{S,3}) where {S<:Complex}
+
+    return (Complex.(evaluate3d_tensor_2x(eval_x, eval_y, eval_z, real(values1), real(values2))), Complex.(evaluate3d_tensor_2x(eval_x, eval_y, eval_z, imag(values1), imag(values2))))
+
+end
+
+function evaluate3d_tensor_4x(eval_x::AbstractVector{S}, eval_y::AbstractVector{S}, eval_z::AbstractVector{S}, values1::AbstractArray{S,3}, values2::AbstractArray{S,3}, value3::AbstractArray{S,3}, value4::AbstractArray{S,3}) where {S<:Complex}
+
+    return (Complex.(evaluate3d_tensor_4x(eval_x, eval_y, eval_z, real(values1), real(values2), real(value3), real(value4))), Complex.(evaluate3d_tensor_4x(eval_x, eval_y, eval_z, imag(values1), imag(values2), imag(value3), imag(value4))))
+
+end
+
+function evaluate3d_tensor_8x(eval_x::AbstractVector{S}, eval_y::AbstractVector{S}, eval_z::AbstractVector{S},
+    values1::AbstractArray{S,3}, values2::AbstractArray{S,3}, value3::AbstractArray{S,3}, value4::AbstractArray{S,3}, value5::AbstractArray{S,3}, value6::AbstractArray{S,3}, value7::AbstractArray{S,3}, value8::AbstractArray{S,3}) where {S<:Complex}
+
+    return (Complex.(evaluate3d_tensor_8x(eval_x, eval_y, eval_z, real(values1), real(values2), real(value3), real(value4), real(value5), real(value6), real(value7), real(value8))), Complex.(evaluate3d_tensor_8x(eval_x, eval_y, eval_z, imag(values1), imag(values2), imag(value3), imag(value4), imag(value5), imag(value6), imag(value7), imag(value8))))
+
+end
+
 
 
 function eval_1d_single_point_impl(x, values, cheb_points, weights)
