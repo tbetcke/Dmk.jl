@@ -6,8 +6,9 @@ using TestItemRunner
 @testitem "test chebychev polynomial 1d" begin
     import Dmk.Chebychev
     using LinearAlgebra
+    using SIMD: Vec
 
-    n = 21
+    n = 30
     cheb_points = Chebychev.cheb_points(n)
     cheb_weights = Chebychev.cheb_weights(n)
     values = exp.(-cheb_points .^ 2)
@@ -20,11 +21,29 @@ using TestItemRunner
     actual_values = Chebychev.evaluate1d(eval_points, values)
     @test actual_values == values
 
+    # Test SIMD
+
+    values1 = exp.(-cheb_points .^ 2)
+    values2 = exp.(-2.0 .* cheb_points .^ 2)
+    simd_values = [Vec{2,Float64}((val1, val2)) for (val1, val2) in zip(values1, values2)]
+    actual_values = Chebychev.evaluate1d(eval_points, simd_values)
+
+    actual_values1 = [getindex(actual_value, 1) for actual_value in actual_values]
+    actual_values2 = [getindex(actual_value, 2) for actual_value in actual_values]
+
+    expected_values1 = exp.(-eval_points .^ 2)
+    expected_values2 = exp.(-2.0 .* eval_points .^ 2)
+
+    @test maximum(abs.((expected_values1 - actual_values1) ./ (expected_values1))) < 1E-13
+    @test maximum(abs.((expected_values2 - actual_values2) ./ (expected_values2))) < 1E-13
+
+
 end
 
 @testitem "test chebychev polynomial 2d" begin
     import Dmk.Chebychev
     using LinearAlgebra
+    import SIMD: Vec
 
 
     m = 40
@@ -60,19 +79,61 @@ end
 
     actual_values = Chebychev.evaluate2d_tensor(eval_x, eval_y, values)
 
-    println("max error: ", maximum(abs.((expected_values - actual_values) ./ (expected_values))))
 
     @test maximum(abs.((expected_values - actual_values) ./ (expected_values))) < 1E-14
+
+    # Test SIMD
+
+    values1 = zeros(Float64, m, n)
+    values2 = zeros(Float64, m, n)
+    for i in axes(values, 1)
+        for j in axes(values, 2)
+            values1[i, j] = exp.(-(3 * cheb_points_x[i]^2 + 5 * cheb_points_y[j]^2))
+            values2[i, j] = exp.(-(4 * cheb_points_x[i]^2 + 2 * cheb_points_y[j]^2))
+        end
+    end
+
+
+    simd_values = zeros(Vec{2,Float64}, m, n)
+    for i in axes(values, 1)
+        for j in axes(values, 2)
+            simd_values[i, j] = Vec{2,Float64}((values1[i, j], values2[i, j]))
+        end
+    end
+
+    actual_values = Chebychev.evaluate2d_tensor(eval_x, eval_y, simd_values)
+    actual_values1 = zeros(npx, npy)
+    actual_values2 = zeros(npx, npy)
+    for i in axes(actual_values, 1)
+        for j in axes(actual_values, 2)
+            actual_values1[i, j] = getindex(actual_values[i, j], 1)
+            actual_values2[i, j] = getindex(actual_values[i, j], 2)
+        end
+    end
+
+    expected_values1 = zeros(npx, npy)
+    expected_values2 = zeros(npx, npy)
+    for i in axes(expected_values1, 1)
+        for j in axes(expected_values1, 2)
+            expected_values1[i, j] = exp.(-(3 * eval_x[i]^2 + 5 * eval_y[j]^2))
+            expected_values2[i, j] = exp.(-(4 * eval_x[i]^2 + 2 * eval_y[j]^2))
+        end
+    end
+
+    @test maximum(abs.((expected_values1 - actual_values1) ./ (expected_values1))) < 1E-14
+    @test maximum(abs.((expected_values2 - actual_values2) ./ (expected_values2))) < 1E-14
 
 end
 
 @testitem "test chebychev polynomial 3d" begin
     import Dmk.Chebychev
     using LinearAlgebra
+    import SIMD: Vec
 
     m = 70
     n = 80
     p = 90
+
 
     npx = 100
     npy = 200
@@ -107,4 +168,55 @@ end
     end
     actual_values = Chebychev.evaluate3d_tensor(eval_x, eval_y, eval_z, values)
     @test maximum(abs.((expected_values - actual_values) ./ (expected_values))) < 1E-14
+
+    # Test SIMD
+
+    values1 = zeros(Float64, m, n, p)
+    values2 = zeros(Float64, m, n, p)
+    for i in axes(values, 1)
+        for j in axes(values, 2)
+            for k in axes(values, 3)
+                values1[i, j, k] = exp.(-(3 * cheb_points_x[i]^2 + 5 * cheb_points_y[j]^2 + 1.5 * cheb_points_z[k]^2))
+                values2[i, j, k] = exp.(-(4 * cheb_points_x[i]^2 + 2 * cheb_points_y[j]^2 + 2.5 * cheb_points_z[k]^2))
+            end
+        end
+    end
+
+
+    simd_values = zeros(Vec{2,Float64}, m, n, p)
+    for i in axes(values, 1)
+        for j in axes(values, 2)
+            for k in axes(values, 3)
+                simd_values[i, j, k] = Vec{2,Float64}((values1[i, j, k], values2[i, j, k]))
+            end
+        end
+    end
+
+    actual_values = Chebychev.evaluate3d_tensor(eval_x, eval_y, eval_z, simd_values)
+    actual_values1 = zeros(npx, npy, npz)
+    actual_values2 = zeros(npx, npy, npz)
+    for i in axes(actual_values, 1)
+        for j in axes(actual_values, 2)
+            for k in axes(actual_values, 3)
+                actual_values1[i, j, k] = getindex(actual_values[i, j, k], 1)
+                actual_values2[i, j, k] = getindex(actual_values[i, j, k], 2)
+            end
+        end
+    end
+
+    expected_values1 = zeros(npx, npy, npz)
+    expected_values2 = zeros(npx, npy, npz)
+    for i in axes(expected_values1, 1)
+        for j in axes(expected_values1, 2)
+            for k in axes(expected_values1, 3)
+                expected_values1[i, j, k] = exp.(-(3 * eval_x[i]^2 + 5 * eval_y[j]^2 + 1.5 * eval_z[k]^2))
+                expected_values2[i, j, k] = exp.(-(4 * eval_x[i]^2 + 2 * eval_y[j]^2 + 2.5 * eval_z[k]^2))
+            end
+        end
+    end
+
+    @test maximum(abs.((expected_values1 - actual_values1) ./ (expected_values1))) < 1E-14
+    @test maximum(abs.((expected_values2 - actual_values2) ./ (expected_values2))) < 1E-14
+
+
 end
