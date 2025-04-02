@@ -129,6 +129,7 @@ end
     import Dmk.Chebychev
     using LinearAlgebra
     import SIMD: Vec
+    import Random
 
     m = 70
     n = 80
@@ -168,6 +169,10 @@ end
     end
     actual_values = Chebychev.evaluate3d_tensor(eval_x, eval_y, eval_z, values)
     @test maximum(abs.((expected_values - actual_values) ./ (expected_values))) < 1E-14
+
+
+
+
 
     # Test SIMD
 
@@ -217,6 +222,51 @@ end
 
     @test maximum(abs.((expected_values1 - actual_values1) ./ (expected_values1))) < 1E-14
     @test maximum(abs.((expected_values2 - actual_values2) ./ (expected_values2))) < 1E-14
+
+    # Test the non-tensor version of the evaluation
+
+    Random.seed!()
+
+    points = 2.0 .* rand(3, 100) .- 1.0
+
+    actual_values = Chebychev.evaluate3d(points, values)
+    expected_values = [
+        exp.(-(3 * points[1, i]^2 + 5 * points[2, i]^2 + 6 * points[3, i]^2)) for i in axes(points, 2)
+    ]
+
+    @test maximum(abs.((expected_values - actual_values) ./ (expected_values))) < 1E-14
+
+    # Check that we get the right non-tensorial result for evaluation on chebychev points
+
+    m = 10
+    n = 10
+    p = 10
+
+    cheb_points_y = Chebychev.cheb_points(n)
+    cheb_weights_y = Chebychev.cheb_weights(n)
+    cheb_points_x = Chebychev.cheb_points(m)
+    cheb_weights_x = Chebychev.cheb_weights(m)
+    cheb_points_z = Chebychev.cheb_points(p)
+    cheb_weights_z = Chebychev.cheb_weights(p)
+    values = zeros(m, n, p)
+    for i in axes(values, 1)
+        for j in axes(values, 2)
+            for k in axes(values, 3)
+                values[i, j, k] = exp.(-(3 * cheb_points_x[i]^2 + 5 * cheb_points_y[j]^2 + 6 * cheb_points_z[k]^2))
+            end
+        end
+    end
+
+
+    points = hcat(cheb_points_x, cheb_points_y, cheb_points_z)'
+
+    actual_values = Chebychev.evaluate3d(points, values)
+    expected_values = [
+        exp.(-(3 * points[1, i]^2 + 5 * points[2, i]^2 + 6 * points[3, i]^2)) for i in axes(points, 2)
+    ]
+    @test maximum(abs.((expected_values - actual_values) ./ (expected_values))) == 0
+
+
 
 
 end

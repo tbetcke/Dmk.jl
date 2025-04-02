@@ -56,11 +56,11 @@ function evaluate1d_impl(eval_points, values, cheb_points, weights)
     for (index, cheb_point) in enumerate(cheb_points)
         @inbounds for i in 1:npoints
             diff = eval_points[i] - cheb_point
-            diff_inv = 1.0 / diff
+            diff_inv = inv(diff)
             if iszero(diff)
                 require_exact[i] = index
             end
-            numerator[i] += values[index] * weights[index] * diff_inv
+            numerator[i] += values[index] * (weights[index] * diff_inv)
             denominator[i] += weights[index] * diff_inv
         end
     end
@@ -211,86 +211,104 @@ function evaluate3d_tensor(eval_x, eval_y, eval_z, values)
 end
 
 
-# function evaluate3d_single_point_impl(x::S, y::S, z::S, values::V, cheb_points::Vector{S}, weights::Vector{S})::S where {S<:Real,V<:AbstractArray{S, 3}}
+function eval_1d_single_point_impl(x, values, cheb_points, weights)
 
-#     function eval_1d_impl(x::S, values::V, cheb_points::Vector{S}, weights::Vector{S})::S where {S<:Real,V<:AbstractVector{S, 3}}::S
+    n = length(values)
 
-#         n = length(values)
+    S = eltype(values)
 
-#         numerator::S = 0.0
-#         denominator::S = 0.0
-#         exact_index::Int64 = 0
+    numerator::S = 0.0
+    denominator::S = 0.0
+    exact_index::Int64 = 0
 
-#         for (index, cheb_point) in enumerate(cheb_points)
-#             diff = x - cheb_point
-#             if iszero(diff)
-#                 exact_index = index
-#             end
-#             diff_inv = 1.0 / diff
-#             numerator += values[index] * weights[index] * diff_inv
-#             denominator += weights[index] * diff_inv
-#         end
+    @inbounds for (index, cheb_point) in enumerate(cheb_points)
+        diff = x - cheb_point
+        if iszero(diff)
+            exact_index = index
+        end
+        diff_inv = inv(diff)
+        numerator += values[index] * (weights[index] * diff_inv)
+        denominator += weights[index] * diff_inv
+    end
 
-#         result = numerator / denominator
+    result = numerator / denominator
 
-#         if exact_index > 0
-#             result = values[exact_index]
-#         end
+    if exact_index > 0
+        result = values[exact_index]
+    end
 
-#         return result
-#     end
+    return result
+end
 
-#     # We now do the 3d evaluation.
+function evaluate3d_single_point_impl(x, y, z, values, cheb_points_x, cheb_points_y, cheb_points_z, weights_x, weights_y, weights_z)
 
-#         # The first axis is the z-dimension
-#     # So m is the number of Chebychev points in z direction
-#     m = size(values, 1)
-#     # n is the number of Chebychev points in the y direction.
-#     n = size(values, 2)
-#     # p is the number of Chebychev points in the x direction.
-#     p = size(values, 3)
+    # We now do the 3d evaluation.
+
+    # The first axis is the z-dimension
+    # So m is the number of Chebychev points in x direction
+    m = size(values, 1)
+    # n is the number of Chebychev points in the y direction.
+    n = size(values, 2)
+    # p is the number of Chebychev points in the z direction.
+    p = size(values, 3)
+
+    S = typeof(x)
+
+    res1 = zeros(S, m, n)
+
+    # Evaluate for z
+    for i in 1:m
+        for j in 1:n
+            res1[i, j] = Chebychev.eval_1d_single_point_impl(z, values[i, j, :], cheb_points_z, weights_z)
+        end
+    end
+
+    res2 = zeros(S, m)
+
+    # For each z point now evaluate across all x along the y direction.
+
+    for i in 1:m
+        res2[i] = Chebychev.eval_1d_single_point_impl(y, res1[i, :], cheb_points_y, weights_y)
+    end
+
+    # Finally, we evaluate for z.
+
+    Chebychev.eval_1d_single_point_impl(x, res2, cheb_points_x, weights_x)
+
+end
+
+function evaluate3d(eval_points::AbstractArray{S,2}, values::AbstractArray{S,3})::Vector{S} where {S<:Real}
+
+    # The eval_points should have first dimension 3
+
+    @assert size(eval_points, 1) == 3
+
+    # The values should have 3 dimensions.
+    @assert ndims(values) == 3
+
+    m = size(values, 1)
+    n = size(values, 2)
+    p = size(values, 3)
+
+    # Create Chebychev points and values for each dimension.
+
+    cheb_points_x = Chebychev.cheb_points(m)
+    cheb_points_y = Chebychev.cheb_points(n)
+    cheb_points_z = Chebychev.cheb_points(p)
+    weights_x = Chebychev.cheb_weights(m)
+    weights_y = Chebychev.cheb_weights(n)
+    weights_z = Chebychev.cheb_weights(p)
+
+    result = zeros(S, size(eval_points, 2))
+
+    for index in eachindex(result)
+        (x, y, z) = eval_points[:, index]
+        result[index] = Chebychev.evaluate3d_single_point_impl(x, y, z, values, cheb_points_x, cheb_points_y, cheb_points_z, weights_x, weights_y, weights_z)
+    end
 
 
+    result
 
-#     cheb_points_m = Chebychev.cheb_points(m)
-#     cheb_points_n = Chebychev.cheb_points(n)
-#     weights_m = Chebychev.cheb_weights(m)
-#     weights_n = Chebychev.cheb_weights(n)
-#     cheb_points_p = Chebychev.cheb_points(p)
-#     weights_p = Chebychev.cheb_weights(p)
-
-#     res1 = zeros(S, m, n, npx)
-
-#     # For each y and z evaluate across the x direction. 
-#     for i in 1:m
-#         for j in 1:n
-#             res1[i, j, :] = Chebychev.evaluate1d_impl(eval_x, values[i, j, :], cheb_points_p, weights_p)
-#         end
-#     end
-
-#     res2 = zeros(S, m, npy, npx)
-
-#     # For each z point now evaluate across all x along the y direction.
-
-#     for i in 1:m
-#         for j in 1:npx
-#             res2[i, :, j] = Chebychev.evaluate1d_impl(eval_y, res1[i, :, j], cheb_points_n, weights_n)
-#         end
-#     end
-
-#     # We have now done the x,y plane for each z point. Now evaluate for each of those points along
-#     # the z direction.
-
-#     res3 = zeros(S, npz, npy, npx)
-
-#     for i in 1:npy
-#         for j in 1:npx
-#             res3[:, i, j] = Chebychev.evaluate1d_impl(eval_z, res2[:, i, j], cheb_points_m, weights_m)
-#         end
-#     end
-
-
-
-# end
+end
 
 end
