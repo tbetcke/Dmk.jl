@@ -245,7 +245,7 @@ end
         exp.(-(3 * points[1, i]^2 + 5 * points[2, i]^2 + 6 * points[3, i]^2)) for i in axes(points, 2)
     ]
     @test maximum(abs.((expected_values - actual_values) ./ (expected_values))) == 0
-    Ì
+
 
 
 
